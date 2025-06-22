@@ -1,56 +1,52 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, ExternalLink } from 'lucide-react';
 import { CreateStackModal } from './CreateStackModal';
-
-interface Stack {
-  id: string;
-  name: string;
-  description: string;
-}
+import { workflowApi, Workflow } from '@/services/api';
 
 interface StackDashboardProps {
   onStackSelect: (stackId: string) => void;
 }
 
-const sampleStacks: Stack[] = [
-  {
-    id: '1',
-    name: 'Chat With AI',
-    description: 'Chat with a smart AI'
-  },
-  {
-    id: '2',
-    name: 'Content Writer',
-    description: 'Helps you write content'
-  },
-  {
-    id: '3',
-    name: 'Content Summarizer',
-    description: 'Helps you summarize content'
-  },
-  {
-    id: '4',
-    name: 'Information Finder',
-    description: 'Helps you find relevant information'
-  }
-];
-
 export const StackDashboard: React.FC<StackDashboardProps> = ({ onStackSelect }) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [stacks, setStacks] = useState<Stack[]>(sampleStacks);
+  const [stacks, setStacks] = useState<Workflow[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleCreateStack = (name: string, description: string) => {
-    const newStack: Stack = {
-      id: Date.now().toString(),
-      name,
-      description
-    };
-    setStacks(prev => [...prev, newStack]);
-    setIsCreateModalOpen(false);
-    onStackSelect(newStack.id);
+  useEffect(() => {
+    loadStacks();
+  }, []);
+
+  const loadStacks = async () => {
+    try {
+      const workflows = await workflowApi.getWorkflows();
+      setStacks(workflows);
+    } catch (error) {
+      console.error('Failed to load workflows:', error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleCreateStack = async (name: string, description: string) => {
+    try {
+      const newStack = await workflowApi.createWorkflow(name, description);
+      setStacks(prev => [...prev, newStack]);
+      setIsCreateModalOpen(false);
+      onStackSelect(newStack.id.toString());
+    } catch (error) {
+      console.error('Failed to create workflow:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center">
+        <div className="text-gray-500">Loading stacks...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -79,11 +75,11 @@ export const StackDashboard: React.FC<StackDashboardProps> = ({ onStackSelect })
           {stacks.map((stack) => (
             <div key={stack.id} className="bg-white border rounded-lg p-6 hover:shadow-md transition-shadow">
               <h3 className="font-semibold mb-2">{stack.name}</h3>
-              <p className="text-gray-600 text-sm mb-4">{stack.description}</p>
+              <p className="text-gray-600 text-sm mb-4">{stack.description || 'No description'}</p>
               <Button 
                 variant="outline" 
                 className="w-full"
-                onClick={() => onStackSelect(stack.id)}
+                onClick={() => onStackSelect(stack.id.toString())}
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Edit Stack

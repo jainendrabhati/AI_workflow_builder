@@ -1,73 +1,179 @@
-# Welcome to your Lovable project
 
-## Project info
+# Intelligent Workflow Builder
 
-**URL**: https://lovable.dev/projects/5ce9b266-f437-4ec9-aa7c-3290f559d86f
+A No-Code/Low-Code web application that enables users to visually create and interact with intelligent AI workflows.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- Visual workflow builder using React Flow
+- Support for 4 core components:
+  - User Query Component
+  - Knowledge Base Component (document processing)
+  - LLM Engine Component (OpenAI GPT, Gemini)
+  - Output Component (chat interface)
+- Document upload and processing with embeddings
+- Vector search using ChromaDB
+- Real-time chat interface
+- PostgreSQL database for persistence
 
-**Use Lovable**
+## Tech Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/5ce9b266-f437-4ec9-aa7c-3290f559d86f) and start prompting.
+- **Frontend**: React.js, React Flow, Tailwind CSS, Shadcn/ui
+- **Backend**: FastAPI, PostgreSQL, SQLAlchemy
+- **AI Services**: OpenAI GPT/Embeddings, Google Gemini
+- **Vector Store**: ChromaDB
+- **Document Processing**: PyMuPDF
+- **Web Search**: SerpAPI (optional)
 
-Changes made via Lovable will be committed automatically to this repo.
+## Required API Keys
 
-**Use your preferred IDE**
+You'll need the following API keys:
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. **OpenAI API Key** (Required)
+   - For GPT models and text embeddings
+   - Get it from: https://platform.openai.com/api-keys
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+2. **Google AI API Key** (Optional)
+   - For Gemini models
+   - Get it from: https://makersuite.google.com/app/apikey
 
-Follow these steps:
+3. **SerpAPI Key** (Optional)
+   - For web search functionality
+   - Get it from: https://serpapi.com/
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## Setup Instructions
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Prerequisites
 
-# Step 3: Install the necessary dependencies.
-npm i
+- Docker and Docker Compose
+- Node.js 18+ (for local development)
+- Python 3.11+ (for local development)
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+### Quick Start with Docker
 
-**Edit a file directly in GitHub**
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd intelligent-workflow-builder
+   ```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+2. Create environment file:
+   ```bash
+   cp backend/.env.example .env
+   ```
 
-**Use GitHub Codespaces**
+3. Add your API keys to the `.env` file:
+   ```env
+   OPENAI_API_KEY=your_openai_api_key_here
+   GOOGLE_AI_API_KEY=your_google_ai_api_key_here
+   SERPAPI_API_KEY=your_serpapi_key_here
+   ```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+4. Start the application:
+   ```bash
+   docker-compose up -d
+   ```
 
-## What technologies are used for this project?
+5. Access the application:
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000
+   - API Documentation: http://localhost:8000/docs
 
-This project is built with:
+### Local Development Setup
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+#### Backend Setup
 
-## How can I deploy this project?
+1. Navigate to backend directory:
+   ```bash
+   cd backend
+   ```
 
-Simply open [Lovable](https://lovable.dev/projects/5ce9b266-f437-4ec9-aa7c-3290f559d86f) and click on Share -> Publish.
+2. Create virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
-## Can I connect a custom domain to my Lovable project?
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-Yes, you can!
+4. Set up environment variables:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys
+   ```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+5. Start PostgreSQL database (using Docker):
+   ```bash
+   docker run -d --name postgres-db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=workflow_db -p 5432:5432 postgres:15
+   ```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+6. Run the backend:
+   ```bash
+   uvicorn app.main:app --reload
+   ```
+
+#### Frontend Setup
+
+1. Navigate to frontend directory:
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start development server:
+   ```bash
+   npm run dev
+   ```
+
+## Usage
+
+1. **Landing Page**: Visit the homepage and click "Get Started"
+2. **Create Workflow**: Create a new stack (workflow)
+3. **Build Workflow**: Drag and drop components to build your workflow
+4. **Configure Components**: Select components to configure their settings
+5. **Upload Documents**: Upload PDFs to the Knowledge Base component
+6. **Test Workflow**: Use the chat interface to test your workflow
+
+## API Endpoints
+
+### Workflows
+- `GET /api/v1/workflows/` - Get all workflows
+- `POST /api/v1/workflows/` - Create new workflow
+- `PUT /api/v1/workflows/{id}` - Update workflow
+- `GET /api/v1/workflows/{id}` - Get workflow by ID
+
+### Documents
+- `POST /api/v1/documents/upload` - Upload document
+- `GET /api/v1/documents/search` - Search documents
+
+### Chat
+- `POST /api/v1/chat/` - Send chat message and execute workflow
+
+## Architecture
+
+The application follows a microservices architecture:
+
+- **Frontend**: React SPA with React Flow for visual workflow building
+- **Backend**: FastAPI with async processing
+- **Database**: PostgreSQL for data persistence
+- **Vector Store**: ChromaDB for document embeddings
+- **AI Services**: OpenAI and Google AI APIs
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+MIT License

@@ -5,6 +5,7 @@ import { UserQueryConfig } from './configs/UserQueryConfig';
 import { KnowledgeBaseConfig } from './configs/KnowledgeBaseConfig';
 import { LLMEngineConfig } from './configs/LLMEngineConfig';
 import { OutputConfig } from './configs/OutputConfig';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ConfigPanelProps {
   selectedNode: Node | null;
@@ -16,7 +17,7 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ selectedNode, onNodeUp
     return (
       <div className="w-80 bg-white border-l p-4">
         <div className="text-center text-gray-500 mt-8">
-          Select a node to configure
+          Select a component to configure
         </div>
       </div>
     );
@@ -33,14 +34,21 @@ export const ConfigPanel: React.FC<ConfigPanelProps> = ({ selectedNode, onNodeUp
       case 'output':
         return <OutputConfig node={selectedNode} onUpdate={onNodeUpdate} />;
       default:
-        return <div>Unknown node type</div>;
+        return <div>Unknown component type</div>;
     }
   };
 
   return (
-    <div className="w-80 bg-white border-l p-4">
-      <h3 className="font-semibold mb-4">{selectedNode.data.label} Configuration</h3>
-      {renderConfig()}
+    <div className="w-80 bg-white border-l">
+      <Card className="m-4">
+        <CardHeader>
+          <CardTitle className="text-lg">Configure Component</CardTitle>
+          <p className="text-sm text-gray-600">{selectedNode.data?.label || selectedNode.type}</p>
+        </CardHeader>
+        <CardContent>
+          {renderConfig()}
+        </CardContent>
+      </Card>
     </div>
   );
 };
