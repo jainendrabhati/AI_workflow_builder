@@ -1,14 +1,13 @@
 
 import React from 'react';
-import { Node } from '@xyflow/react';
 import { Label } from '@/components/ui/label';
 
 interface OutputConfigProps {
-  node: Node;
-  onUpdate: (nodeId: string, config: any) => void;
+  config: any;
+  onUpdate: (config: any) => void;
 }
 
-export const OutputConfig: React.FC<OutputConfigProps> = ({ node, onUpdate }) => {
+export const OutputConfig: React.FC<OutputConfigProps> = ({ config, onUpdate }) => {
   return (
     <div className="space-y-4">
       <div>

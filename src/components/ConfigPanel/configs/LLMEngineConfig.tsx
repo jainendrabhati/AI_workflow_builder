@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Node } from '@xyflow/react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,19 +8,19 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface LLMEngineConfigProps {
-  node: Node;
-  onUpdate: (nodeId: string, config: any) => void;
+  config: any;
+  onUpdate: (config: any) => void;
 }
 
-export const LLMEngineConfig: React.FC<LLMEngineConfigProps> = ({ node, onUpdate }) => {
-  const [temperature, setTemperature] = React.useState([0.75]);
-  const [webSearchEnabled, setWebSearchEnabled] = React.useState(true);
+export const LLMEngineConfig: React.FC<LLMEngineConfigProps> = ({ config, onUpdate }) => {
+  const [temperature, setTemperature] = React.useState([config.temperature || 0.75]);
+  const [webSearchEnabled, setWebSearchEnabled] = React.useState(config.webSearch || true);
 
   return (
     <div className="space-y-4">
       <div>
         <Label>Model</Label>
-        <Select>
+        <Select onValueChange={(value) => onUpdate({ ...config, model: value })}>
           <SelectTrigger className="mt-1">
             <SelectValue placeholder="GPT 4o - Mini" />
           </SelectTrigger>
@@ -40,7 +39,8 @@ export const LLMEngineConfig: React.FC<LLMEngineConfigProps> = ({ node, onUpdate
           type="password"
           placeholder="••••••••••••••••"
           className="mt-1"
-          onChange={(e) => onUpdate(node.id, { apiKey: e.target.value })}
+          value={config.apiKey || ''}
+          onChange={(e) => onUpdate({ ...config, apiKey: e.target.value })}
         />
       </div>
       
@@ -51,7 +51,8 @@ export const LLMEngineConfig: React.FC<LLMEngineConfigProps> = ({ node, onUpdate
           placeholder="You are a helpful PDF assistant. Use web search if the PDF lacks context."
           className="mt-1"
           rows={3}
-          onChange={(e) => onUpdate(node.id, { prompt: e.target.value })}
+          value={config.prompt || ''}
+          onChange={(e) => onUpdate({ ...config, prompt: e.target.value })}
         />
         <div className="text-xs text-blue-600 mt-1">
           • CONTEXT: {'{context}'}
@@ -64,7 +65,10 @@ export const LLMEngineConfig: React.FC<LLMEngineConfigProps> = ({ node, onUpdate
         <div className="mt-2">
           <Slider
             value={temperature}
-            onValueChange={setTemperature}
+            onValueChange={(value) => {
+              setTemperature(value);
+              onUpdate({ ...config, temperature: value[0] });
+            }}
             max={1}
             min={0}
             step={0.01}
@@ -79,7 +83,10 @@ export const LLMEngineConfig: React.FC<LLMEngineConfigProps> = ({ node, onUpdate
         <Switch
           id="web-search"
           checked={webSearchEnabled}
-          onCheckedChange={setWebSearchEnabled}
+          onCheckedChange={(checked) => {
+            setWebSearchEnabled(checked);
+            onUpdate({ ...config, webSearch: checked });
+          }}
         />
       </div>
       
@@ -91,7 +98,8 @@ export const LLMEngineConfig: React.FC<LLMEngineConfigProps> = ({ node, onUpdate
             type="password"
             placeholder="••••••••••••••••"
             className="mt-1"
-            onChange={(e) => onUpdate(node.id, { serpApiKey: e.target.value })}
+            value={config.serpApiKey || ''}
+            onChange={(e) => onUpdate({ ...config, serpApiKey: e.target.value })}
           />
         </div>
       )}

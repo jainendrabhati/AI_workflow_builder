@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Node } from '@xyflow/react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -8,11 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Upload } from 'lucide-react';
 
 interface KnowledgeBaseConfigProps {
-  node: Node;
-  onUpdate: (nodeId: string, config: any) => void;
+  config: any;
+  onUpdate: (config: any) => void;
 }
 
-export const KnowledgeBaseConfig: React.FC<KnowledgeBaseConfigProps> = ({ node, onUpdate }) => {
+export const KnowledgeBaseConfig: React.FC<KnowledgeBaseConfigProps> = ({ config, onUpdate }) => {
   return (
     <div className="space-y-4">
       <div>
@@ -25,7 +24,7 @@ export const KnowledgeBaseConfig: React.FC<KnowledgeBaseConfigProps> = ({ node, 
       
       <div>
         <Label>Embedding Model</Label>
-        <Select>
+        <Select onValueChange={(value) => onUpdate({ ...config, embeddingModel: value })}>
           <SelectTrigger className="mt-1">
             <SelectValue placeholder="text-embedding-3-large" />
           </SelectTrigger>
@@ -43,7 +42,8 @@ export const KnowledgeBaseConfig: React.FC<KnowledgeBaseConfigProps> = ({ node, 
           type="password"
           placeholder="••••••••••••••••"
           className="mt-1"
-          onChange={(e) => onUpdate(node.id, { apiKey: e.target.value })}
+          value={config.apiKey || ''}
+          onChange={(e) => onUpdate({ ...config, apiKey: e.target.value })}
         />
       </div>
     </div>

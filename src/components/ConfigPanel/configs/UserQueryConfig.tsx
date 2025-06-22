@@ -1,15 +1,14 @@
 
 import React from 'react';
-import { Node } from '@xyflow/react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 interface UserQueryConfigProps {
-  node: Node;
-  onUpdate: (nodeId: string, config: any) => void;
+  config: any;
+  onUpdate: (config: any) => void;
 }
 
-export const UserQueryConfig: React.FC<UserQueryConfigProps> = ({ node, onUpdate }) => {
+export const UserQueryConfig: React.FC<UserQueryConfigProps> = ({ config, onUpdate }) => {
   return (
     <div className="space-y-4">
       <div>
@@ -18,7 +17,8 @@ export const UserQueryConfig: React.FC<UserQueryConfigProps> = ({ node, onUpdate
           id="query"
           placeholder="Write your query here"
           className="mt-1"
-          onChange={(e) => onUpdate(node.id, { query: e.target.value })}
+          value={config.query || ''}
+          onChange={(e) => onUpdate({ ...config, query: e.target.value })}
         />
       </div>
     </div>
