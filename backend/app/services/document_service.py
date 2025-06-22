@@ -1,6 +1,5 @@
-
 import fitz  # PyMuPDF
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.services.llm_service import LLMService
 from app.services.vector_service import VectorService
 
@@ -90,7 +89,6 @@ class DocumentService:
                 query_embedding=query_embedding,
                 n_results=n_results
             )
-            
             return results
         except Exception as e:
             print(f"Error searching documents: {str(e)}")
