@@ -1,49 +1,79 @@
 
 import React from 'react';
 import { Node } from '@xyflow/react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserQueryConfig } from './configs/UserQueryConfig';
 import { KnowledgeBaseConfig } from './configs/KnowledgeBaseConfig';
 import { LLMEngineConfig } from './configs/LLMEngineConfig';
 import { OutputConfig } from './configs/OutputConfig';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ConfigPanelProps {
   selectedNode: Node | null;
   onNodeUpdate: (nodeId: string, config: any) => void;
 }
 
-export const ConfigPanel: React.FC<ConfigPanelProps> = ({ selectedNode, onNodeUpdate }) => {
-  if (!selectedNode) {
-    return (
-      <div className="w-80 bg-white border-l p-4">
-        <div className="text-center text-gray-500 mt-8">
-          Select a component to configure
-        </div>
-      </div>
-    );
-  }
-
+export const ConfigPanel: React.FC<ConfigPanelProps> = ({
+  selectedNode,
+  onNodeUpdate,
+}) => {
   const renderConfig = () => {
+    if (!selectedNode) {
+      return (
+        <div className="text-center text-gray-500 mt-8">
+          Select a component to configure its settings
+        </div>
+      );
+    }
+
+    const handleConfigUpdate = (config: any) => {
+      onNodeUpdate(selectedNode.id, config);
+    };
+
     switch (selectedNode.type) {
       case 'userQuery':
-        return <UserQueryConfig node={selectedNode} onUpdate={onNodeUpdate} />;
+        return (
+          <UserQueryConfig
+            config={selectedNode.data.config || {}}
+            onUpdate={handleConfigUpdate}
+          />
+        );
       case 'knowledgeBase':
-        return <KnowledgeBaseConfig node={selectedNode} onUpdate={onNodeUpdate} />;
+        return (
+          <KnowledgeBaseConfig
+            config={selectedNode.data.config || {}}
+            onUpdate={handleConfigUpdate}
+          />
+        );
       case 'llmEngine':
-        return <LLMEngineConfig node={selectedNode} onUpdate={onNodeUpdate} />;
+        return (
+          <LLMEngineConfig
+            config={selectedNode.data.config || {}}
+            onUpdate={handleConfigUpdate}
+          />
+        );
       case 'output':
-        return <OutputConfig node={selectedNode} onUpdate={onNodeUpdate} />;
+        return (
+          <OutputConfig
+            config={selectedNode.data.config || {}}
+            onUpdate={handleConfigUpdate}
+          />
+        );
       default:
-        return <div>Unknown component type</div>;
+        return (
+          <div className="text-center text-gray-500 mt-8">
+            Unknown component type
+          </div>
+        );
     }
   };
 
   return (
-    <div className="w-80 bg-white border-l">
-      <Card className="m-4">
+    <div className="w-80 bg-white border-l border-gray-200 p-4 overflow-y-auto">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Configure Component</CardTitle>
-          <p className="text-sm text-gray-600">{selectedNode.data?.label || selectedNode.type}</p>
+          <CardTitle className="text-lg">
+            {selectedNode ? `Configure ${selectedNode.data.label}` : 'Configuration'}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {renderConfig()}
