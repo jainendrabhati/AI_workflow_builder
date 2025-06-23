@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,11 +15,41 @@ export const LLMEngineConfig: React.FC<LLMEngineConfigProps> = ({ config, onUpda
   const [temperature, setTemperature] = React.useState([config.temperature || 0.75]);
   const [webSearchEnabled, setWebSearchEnabled] = React.useState(config.webSearch || true);
 
+  const handleModelChange = (value: string) => {
+    console.log('Model changed:', value);
+    onUpdate({ model: value });
+  };
+
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('LLM API Key changed');
+    onUpdate({ apiKey: e.target.value });
+  };
+
+  const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    console.log('Prompt changed');
+    onUpdate({ prompt: e.target.value });
+  };
+
+  const handleTemperatureChange = (value: number[]) => {
+    setTemperature(value);
+    onUpdate({ temperature: value[0] });
+  };
+
+  const handleWebSearchToggle = (checked: boolean) => {
+    setWebSearchEnabled(checked);
+    onUpdate({ webSearch: checked });
+  };
+
+  const handleSerpApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('SERP API Key changed');
+    onUpdate({ serpApiKey: e.target.value });
+  };
+
   return (
     <div className="space-y-4">
       <div>
         <Label>Model</Label>
-        <Select onValueChange={(value) => onUpdate({ ...config, model: value })}>
+        <Select onValueChange={handleModelChange} value={config.model}>
           <SelectTrigger className="mt-1">
             <SelectValue placeholder="GPT 4o - Mini" />
           </SelectTrigger>
@@ -40,7 +69,7 @@ export const LLMEngineConfig: React.FC<LLMEngineConfigProps> = ({ config, onUpda
           placeholder="••••••••••••••••"
           className="mt-1"
           value={config.apiKey || ''}
-          onChange={(e) => onUpdate({ ...config, apiKey: e.target.value })}
+          onChange={handleApiKeyChange}
         />
       </div>
       
@@ -52,7 +81,7 @@ export const LLMEngineConfig: React.FC<LLMEngineConfigProps> = ({ config, onUpda
           className="mt-1"
           rows={3}
           value={config.prompt || ''}
-          onChange={(e) => onUpdate({ ...config, prompt: e.target.value })}
+          onChange={handlePromptChange}
         />
         <div className="text-xs text-blue-600 mt-1">
           • CONTEXT: {'{context}'}
@@ -65,10 +94,7 @@ export const LLMEngineConfig: React.FC<LLMEngineConfigProps> = ({ config, onUpda
         <div className="mt-2">
           <Slider
             value={temperature}
-            onValueChange={(value) => {
-              setTemperature(value);
-              onUpdate({ ...config, temperature: value[0] });
-            }}
+            onValueChange={handleTemperatureChange}
             max={1}
             min={0}
             step={0.01}
@@ -83,10 +109,7 @@ export const LLMEngineConfig: React.FC<LLMEngineConfigProps> = ({ config, onUpda
         <Switch
           id="web-search"
           checked={webSearchEnabled}
-          onCheckedChange={(checked) => {
-            setWebSearchEnabled(checked);
-            onUpdate({ ...config, webSearch: checked });
-          }}
+          onCheckedChange={handleWebSearchToggle}
         />
       </div>
       
@@ -99,7 +122,7 @@ export const LLMEngineConfig: React.FC<LLMEngineConfigProps> = ({ config, onUpda
             placeholder="••••••••••••••••"
             className="mt-1"
             value={config.serpApiKey || ''}
-            onChange={(e) => onUpdate({ ...config, serpApiKey: e.target.value })}
+            onChange={handleSerpApiKeyChange}
           />
         </div>
       )}

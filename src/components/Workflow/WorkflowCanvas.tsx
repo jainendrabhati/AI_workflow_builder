@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState } from 'react';
 import {
   ReactFlow,
@@ -17,25 +18,59 @@ import { UserQueryNode } from './nodes/UserQueryNode';
 import { KnowledgeBaseNode } from './nodes/KnowledgeBaseNode';
 import { LLMEngineNode } from './nodes/LLMEngineNode';
 import { OutputNode } from './nodes/OutputNode';
+import { WebSearchNode } from './nodes/WebSearchNode';
 
 const nodeTypes = {
   userQuery: UserQueryNode,
   knowledgeBase: KnowledgeBaseNode,
   llmEngine: LLMEngineNode,
   output: OutputNode,
+  webSearch: WebSearchNode,
 };
 
 interface WorkflowCanvasProps {
   onNodeSelect: (node: Node | null) => void;
+  onNodeUpdate?: (nodeId: string, config: any) => void;
 }
 
-export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeSelect }) => {
+export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeSelect, onNodeUpdate }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+
+  const handleNodeUpdate = useCallback((nodeId: string, newConfig: any) => {
+    console.log('Updating node in canvas:', nodeId, newConfig);
+    
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === nodeId) {
+          const updatedNode = {
+            ...node,
+            data: {
+              ...node.data,
+              config: {
+                ...node.data.config,
+                ...newConfig
+              }
+            }
+          };
+          console.log('Updated node:', updatedNode);
+          return updatedNode;
+        }
+        return node;
+      })
+    );
+    
+    // Also call the parent handler if provided
+    if (onNodeUpdate) {
+      onNodeUpdate(nodeId, newConfig);
+    }
+  }, [setNodes, onNodeUpdate]);
 
   const onConnect = useCallback(
-    (params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)),
+    (params: Connection | Edge) => {
+      console.log('Connecting nodes:', params);
+      setEdges((eds) => addEdge(params, eds));
+    },
     [setEdges]
   );
 
@@ -48,44 +83,66 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeSelect }) 
     (event: React.DragEvent) => {
       event.preventDefault();
 
-      const reactFlowBounds = event.currentTarget.getBoundingClientRect();
       const type = event.dataTransfer.getData('application/reactflow');
+      if (!type) {
+        console.log('No type found in dataTransfer');
+        return;
+      }
 
-      if (!type) return;
-
-      const position = reactFlowInstance?.project({
+      const reactFlowBounds = event.currentTarget.getBoundingClientRect();
+      const position = {
         x: event.clientX - reactFlowBounds.left,
         y: event.clientY - reactFlowBounds.top,
-      });
+      };
 
-      const newNode = {
+      console.log('Dropping node:', { type, position });
+
+      const newNode: Node = {
         id: `${type}-${Date.now()}`,
         type,
         position,
-        data: { label: `${type} node` },
+        data: { 
+          label: `${type} node`,
+          config: {},
+          onUpdate: handleNodeUpdate,
+        },
       };
 
+      console.log('Creating new node:', newNode);
       setNodes((nds) => nds.concat(newNode));
     },
-    [reactFlowInstance, setNodes]
+    [setNodes, handleNodeUpdate]
   );
 
   const onNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
-      onNodeSelect(node);
+      console.log('Node clicked:', node);
+      // Add the update handler to the node data before selecting it
+      const nodeWithHandler = {
+        ...node,
+        data: {
+          ...node.data,
+          onUpdate: handleNodeUpdate,
+        }
+      };
+      onNodeSelect(nodeWithHandler);
     },
-    [onNodeSelect]
+    [onNodeSelect, handleNodeUpdate]
   );
 
+  const onInit = useCallback((reactFlowInstance: any) => {
+    console.log('ReactFlow initialized:', reactFlowInstance);
+  }, []);
+
   return (
-    <div className="w-full h-[calc(100vh-64px)] relative"> {/* Adjust height as per your layout */}
+    <div className="w-full h-[calc(100vh-64px)] relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onInit={setReactFlowInstance}
+        onInit={onInit}
         onDrop={onDrop}
         onDragOver={onDragOver}
         onNodeClick={onNodeClick}

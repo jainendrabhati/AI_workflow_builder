@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +8,12 @@ interface UserQueryConfigProps {
 }
 
 export const UserQueryConfig: React.FC<UserQueryConfigProps> = ({ config, onUpdate }) => {
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('Query input changed:', e.target.value);
+    // Only update the query field, preserve others
+    onUpdate({ query: e.target.value });
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -18,7 +23,7 @@ export const UserQueryConfig: React.FC<UserQueryConfigProps> = ({ config, onUpda
           placeholder="Write your query here"
           className="mt-1"
           value={config.query || ''}
-          onChange={(e) => onUpdate({ ...config, query: e.target.value })}
+          onChange={handleQueryChange}
         />
       </div>
     </div>
