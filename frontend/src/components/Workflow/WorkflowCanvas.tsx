@@ -1,3 +1,4 @@
+
 import React, { useCallback, useState } from 'react';
 import {
   ReactFlow,
@@ -17,12 +18,14 @@ import { UserQueryNode } from './nodes/UserQueryNode';
 import { KnowledgeBaseNode } from './nodes/KnowledgeBaseNode';
 import { LLMEngineNode } from './nodes/LLMEngineNode';
 import { OutputNode } from './nodes/OutputNode';
+import { WebSearchNode } from './nodes/WebSearchNode';
 
 const nodeTypes = {
   userQuery: UserQueryNode,
   knowledgeBase: KnowledgeBaseNode,
   llmEngine: LLMEngineNode,
   output: OutputNode,
+  webSearch: WebSearchNode,
 };
 
 interface WorkflowCanvasProps {
@@ -32,7 +35,6 @@ interface WorkflowCanvasProps {
 export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeSelect }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
 
   const onConnect = useCallback(
     (params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)),
@@ -48,26 +50,36 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeSelect }) 
     (event: React.DragEvent) => {
       event.preventDefault();
 
-      const reactFlowBounds = event.currentTarget.getBoundingClientRect();
       const type = event.dataTransfer.getData('application/reactflow');
+      if (!type) {
+        console.log('No type found in dataTransfer');
+        return;
+      }
 
-      if (!type) return;
-
-      const position = reactFlowInstance?.project({
+      // Get the bounds of the ReactFlow wrapper
+      const reactFlowBounds = event.currentTarget.getBoundingClientRect();
+      
+      // Calculate position relative to the ReactFlow canvas
+      const position = {
         x: event.clientX - reactFlowBounds.left,
         y: event.clientY - reactFlowBounds.top,
-      });
+      };
 
-      const newNode = {
+      console.log('Dropping node:', { type, position });
+
+      const newNode: Node = {
         id: `${type}-${Date.now()}`,
         type,
         position,
-        data: { label: `${type} node` },
+        data: { 
+          label: `${type} node`,
+        },
       };
 
+      console.log('Creating new node:', newNode);
       setNodes((nds) => nds.concat(newNode));
     },
-    [reactFlowInstance, setNodes]
+    [setNodes]
   );
 
   const onNodeClick = useCallback(
@@ -77,15 +89,19 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeSelect }) 
     [onNodeSelect]
   );
 
+  const onInit = useCallback((reactFlowInstance: any) => {
+    console.log('ReactFlow initialized:', reactFlowInstance);
+  }, []);
+
   return (
-    <div className="w-full h-[calc(100vh-64px)] relative"> {/* Adjust height as per your layout */}
+    <div className="w-full h-[calc(100vh-64px)] relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onInit={setReactFlowInstance}
+        onInit={onInit}
         onDrop={onDrop}
         onDragOver={onDragOver}
         onNodeClick={onNodeClick}
