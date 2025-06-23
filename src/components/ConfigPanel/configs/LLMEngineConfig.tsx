@@ -18,32 +18,32 @@ export const LLMEngineConfig: React.FC<LLMEngineConfigProps> = ({ config, onUpda
 
   const handleModelChange = (value: string) => {
     console.log('Model changed:', value);
-    onUpdate({ ...config, model: value });
+    onUpdate({ model: value });
   };
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('LLM API Key changed');
-    onUpdate({ ...config, apiKey: e.target.value });
+    onUpdate({ apiKey: e.target.value });
   };
 
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     console.log('Prompt changed');
-    onUpdate({ ...config, prompt: e.target.value });
+    onUpdate({ prompt: e.target.value });
   };
 
   const handleTemperatureChange = (value: number[]) => {
     setTemperature(value);
-    onUpdate({ ...config, temperature: value[0] });
+    onUpdate({ temperature: value[0] });
   };
 
   const handleWebSearchToggle = (checked: boolean) => {
     setWebSearchEnabled(checked);
-    onUpdate({ ...config, webSearch: checked });
+    onUpdate({ webSearch: checked });
   };
 
   const handleSerpApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('SERP API Key changed');
-    onUpdate({ ...config, serpApiKey: e.target.value });
+    onUpdate({ serpApiKey: e.target.value });
   };
 
   return (

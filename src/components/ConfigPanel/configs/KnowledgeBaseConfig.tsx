@@ -18,13 +18,24 @@ export const KnowledgeBaseConfig: React.FC<KnowledgeBaseConfigProps> = ({ config
     const file = e.target.files?.[0];
     if (file) {
       console.log('File selected:', file.name);
-      onUpdate({ ...config, fileName: file.name, file: file });
+      // Only update the file-related fields, preserve others
+      onUpdate({ 
+        fileName: file.name, 
+        file: file 
+      });
     }
   };
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('API Key changed');
-    onUpdate({ ...config, apiKey: e.target.value });
+    // Only update the API key, preserve others
+    onUpdate({ apiKey: e.target.value });
+  };
+
+  const handleEmbeddingModelChange = (value: string) => {
+    console.log('Embedding model changed:', value);
+    // Only update the embedding model, preserve others
+    onUpdate({ embeddingModel: value });
   };
 
   return (
@@ -52,7 +63,7 @@ export const KnowledgeBaseConfig: React.FC<KnowledgeBaseConfigProps> = ({ config
       
       <div>
         <Label>Embedding Model</Label>
-        <Select onValueChange={(value) => onUpdate({ ...config, embeddingModel: value })}>
+        <Select onValueChange={handleEmbeddingModelChange} value={config.embeddingModel}>
           <SelectTrigger className="mt-1">
             <SelectValue placeholder="text-embedding-3-large" />
           </SelectTrigger>

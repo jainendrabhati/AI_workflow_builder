@@ -11,7 +11,8 @@ interface UserQueryConfigProps {
 export const UserQueryConfig: React.FC<UserQueryConfigProps> = ({ config, onUpdate }) => {
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('Query input changed:', e.target.value);
-    onUpdate({ ...config, query: e.target.value });
+    // Only update the query field, preserve others
+    onUpdate({ query: e.target.value });
   };
 
   return (

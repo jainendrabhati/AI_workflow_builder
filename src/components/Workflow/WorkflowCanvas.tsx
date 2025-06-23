@@ -30,11 +30,41 @@ const nodeTypes = {
 
 interface WorkflowCanvasProps {
   onNodeSelect: (node: Node | null) => void;
+  onNodeUpdate?: (nodeId: string, config: any) => void;
 }
 
-export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeSelect }) => {
+export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeSelect, onNodeUpdate }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  const handleNodeUpdate = useCallback((nodeId: string, newConfig: any) => {
+    console.log('Updating node in canvas:', nodeId, newConfig);
+    
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === nodeId) {
+          const updatedNode = {
+            ...node,
+            data: {
+              ...node.data,
+              config: {
+                ...node.data.config,
+                ...newConfig
+              }
+            }
+          };
+          console.log('Updated node:', updatedNode);
+          return updatedNode;
+        }
+        return node;
+      })
+    );
+    
+    // Also call the parent handler if provided
+    if (onNodeUpdate) {
+      onNodeUpdate(nodeId, newConfig);
+    }
+  }, [setNodes, onNodeUpdate]);
 
   const onConnect = useCallback(
     (params: Connection | Edge) => {
@@ -74,21 +104,30 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeSelect }) 
         data: { 
           label: `${type} node`,
           config: {},
+          onUpdate: handleNodeUpdate,
         },
       };
 
       console.log('Creating new node:', newNode);
       setNodes((nds) => nds.concat(newNode));
     },
-    [setNodes]
+    [setNodes, handleNodeUpdate]
   );
 
   const onNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
       console.log('Node clicked:', node);
-      onNodeSelect(node);
+      // Add the update handler to the node data before selecting it
+      const nodeWithHandler = {
+        ...node,
+        data: {
+          ...node.data,
+          onUpdate: handleNodeUpdate,
+        }
+      };
+      onNodeSelect(nodeWithHandler);
     },
-    [onNodeSelect]
+    [onNodeSelect, handleNodeUpdate]
   );
 
   const onInit = useCallback((reactFlowInstance: any) => {

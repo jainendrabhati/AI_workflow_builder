@@ -9,11 +9,13 @@ import { StackDashboard } from '@/components/StackDashboard/StackDashboard';
 import { Button } from '@/components/ui/button';
 import { Node } from '@xyflow/react';
 import { MessageSquare, Play } from 'lucide-react';
+import { toast } from 'sonner';
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<'dashboard' | 'editor'>('editor');
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [workflowNodes, setWorkflowNodes] = useState<Node[]>([]);
 
   const handleDragStart = (event: React.DragEvent, nodeType: string) => {
     console.log('Drag started for:', nodeType);
@@ -23,26 +25,82 @@ const Index = () => {
 
   const handleNodeUpdate = (nodeId: string, config: any) => {
     console.log('Updating node config:', nodeId, config);
-    // Update the selected node's config
+    
+    // Update the selected node's config if it matches
     if (selectedNode && selectedNode.id === nodeId) {
-      setSelectedNode({
+      const updatedSelectedNode = {
         ...selectedNode,
         data: {
           ...selectedNode.data,
-          config: config
+          config: {
+            ...selectedNode.data.config,
+            ...config
+          }
         }
-      });
+      };
+      setSelectedNode(updatedSelectedNode);
     }
+
+    // Update the workflow nodes state
+    setWorkflowNodes(prevNodes => 
+      prevNodes.map(node => 
+        node.id === nodeId 
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                config: {
+                  ...node.data.config,
+                  ...config
+                }
+              }
+            }
+          : node
+      )
+    );
+  };
+
+  const handleNodeSelect = (node: Node | null) => {
+    console.log('Node selected:', node);
+    setSelectedNode(node);
   };
 
   const handleSave = () => {
     console.log('Saving workflow...');
-    // Add save functionality here
+    console.log('Current workflow nodes:', workflowNodes);
+    toast.success('Workflow saved successfully!');
   };
 
   const handleBuildStack = () => {
     console.log('Building stack...');
-    // Add build stack functionality here
+    console.log('Workflow nodes for build:', workflowNodes);
+    
+    // Validate that we have nodes
+    if (workflowNodes.length === 0) {
+      toast.error('Please add some components to your workflow before building');
+      return;
+    }
+
+    // Basic validation for required configurations
+    const userQueryNode = workflowNodes.find(node => node.type === 'userQuery');
+    const llmNode = workflowNodes.find(node => node.type === 'llmEngine');
+
+    if (!userQueryNode) {
+      toast.error('Please add a User Query component to your workflow');
+      return;
+    }
+
+    if (!llmNode) {
+      toast.error('Please add an LLM Engine component to your workflow');
+      return;
+    }
+
+    if (!llmNode.data.config?.apiKey) {
+      toast.error('Please configure the API key for your LLM Engine');
+      return;
+    }
+
+    toast.success('Stack built successfully! 🚀');
   };
 
   const handleNewStack = () => {
@@ -70,7 +128,10 @@ const Index = () => {
         <ComponentLibrary onDragStart={handleDragStart} />
         
         <div className="flex-1 relative">
-          <WorkflowCanvas onNodeSelect={setSelectedNode} />
+          <WorkflowCanvas 
+            onNodeSelect={handleNodeSelect}
+            onNodeUpdate={handleNodeUpdate}
+          />
           
           {/* Floating Action Buttons */}
           <div className="absolute bottom-6 right-6 flex flex-col gap-3">
