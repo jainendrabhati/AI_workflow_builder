@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Header } from '@/components/Layout/Header';
 import { ComponentLibrary } from '@/components/Sidebar/ComponentLibrary';
 import { WorkflowCanvas } from '@/components/Workflow/WorkflowCanvas';
-import { ConfigPanel } from '@/components/ConfigPanel/ConfigPanel';
 import { ChatModal } from '@/components/Chat/ChatModal';
 import { StackDashboard } from '@/components/StackDashboard/StackDashboard';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,6 @@ import { toast } from 'sonner';
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<'dashboard' | 'editor'>('editor');
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [workflowNodes, setWorkflowNodes] = useState<Node[]>([]);
 
@@ -26,22 +24,6 @@ const Index = () => {
   const handleNodeUpdate = (nodeId: string, config: any) => {
     console.log('Updating node config:', nodeId, config);
     
-    // Update the selected node's config if it matches
-    if (selectedNode && selectedNode.id === nodeId) {
-      const updatedSelectedNode = {
-        ...selectedNode,
-        data: {
-          ...selectedNode.data,
-          config: {
-            ...selectedNode.data.config,
-            ...config
-          }
-        }
-      };
-      setSelectedNode(updatedSelectedNode);
-    }
-
-    // Update the workflow nodes state
     setWorkflowNodes(prevNodes => 
       prevNodes.map(node => 
         node.id === nodeId 
@@ -60,14 +42,21 @@ const Index = () => {
     );
   };
 
-  const handleNodeSelect = (node: Node | null) => {
-    console.log('Node selected:', node);
-    setSelectedNode(node);
+  const handleNodesChange = (nodes: Node[]) => {
+    console.log('Nodes changed:', nodes);
+    setWorkflowNodes(nodes);
   };
 
   const handleSave = () => {
     console.log('Saving workflow...');
     console.log('Current workflow nodes:', workflowNodes);
+    
+    if (workflowNodes.length === 0) {
+      toast.error('No components to save. Please add some components to your workflow.');
+      return;
+    }
+
+    // Here you would typically save to backend
     toast.success('Workflow saved successfully!');
   };
 
@@ -95,7 +84,14 @@ const Index = () => {
       return;
     }
 
-    if (!llmNode.data.config?.apiKey) {
+    // Check if user query has content
+    if (!userQueryNode.data.config?.query || userQueryNode.data.config.query.trim() === '') {
+      toast.error('Please enter a query in the User Query component');
+      return;
+    }
+
+    // Check if LLM has API key
+    if (!llmNode.data.config?.apiKey || llmNode.data.config.apiKey.trim() === '') {
       toast.error('Please configure the API key for your LLM Engine');
       return;
     }
@@ -129,8 +125,8 @@ const Index = () => {
         
         <div className="flex-1 relative">
           <WorkflowCanvas 
-            onNodeSelect={handleNodeSelect}
             onNodeUpdate={handleNodeUpdate}
+            onNodesChange={handleNodesChange}
           />
           
           {/* Floating Action Buttons */}
@@ -150,8 +146,6 @@ const Index = () => {
             </Button>
           </div>
         </div>
-        
-        <ConfigPanel selectedNode={selectedNode} onNodeUpdate={handleNodeUpdate} />
       </div>
 
       <ChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />

@@ -57,6 +57,34 @@ export const workflowApi = {
     if (!response.ok) throw new Error('Failed to fetch workflow');
     return response.json();
   },
+
+  // Save workflow with nodes
+  saveWorkflow: async (workflowData: any): Promise<Workflow> => {
+    const response = await fetch(`${API_BASE_URL}/workflow-builder/save`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(workflowData),
+    });
+    if (!response.ok) throw new Error('Failed to save workflow');
+    return response.json();
+  },
+
+  // Build workflow
+  buildWorkflow: async (workflowId: number): Promise<any> => {
+    const response = await fetch(`${API_BASE_URL}/workflow-builder/build/${workflowId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) throw new Error('Failed to build workflow');
+    return response.json();
+  },
+
+  // Validate workflow
+  validateWorkflow: async (workflowId: number): Promise<any> => {
+    const response = await fetch(`${API_BASE_URL}/workflow-builder/validate/${workflowId}`);
+    if (!response.ok) throw new Error('Failed to validate workflow');
+    return response.json();
+  },
 };
 
 export const documentApi = {

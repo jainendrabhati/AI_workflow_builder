@@ -1,17 +1,41 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { MessageSquare } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 export const UserQueryNode = ({ data, selected }: any) => {
+  const [query, setQuery] = useState(data.config?.query || '');
+
+  useEffect(() => {
+    setQuery(data.config?.query || '');
+  }, [data.config?.query]);
+
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newQuery = e.target.value;
+    setQuery(newQuery);
+    
+    if (data.onUpdate) {
+      data.onUpdate(data.id || data.nodeId, { query: newQuery });
+    }
+  };
+
   return (
-    <div className={`bg-white border-2 rounded-lg p-4 min-w-[200px] ${selected ? 'border-blue-500' : 'border-gray-200'}`}>
-      <div className="flex items-center gap-2 mb-2">
+    <div className={`bg-white border-2 rounded-lg p-4 min-w-[250px] ${selected ? 'border-blue-500' : 'border-gray-200'}`}>
+      <div className="flex items-center gap-2 mb-3">
         <MessageSquare className="w-5 h-5 text-blue-600" />
         <span className="font-medium">User Query</span>
       </div>
-      <div className="text-sm text-gray-600 mb-3">Enter point for queries</div>
-      <div className="text-xs text-gray-500">User Query</div>
+      
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700">Enter your query:</label>
+        <Input
+          placeholder="Write your query here..."
+          value={query}
+          onChange={handleQueryChange}
+          className="w-full text-sm"
+        />
+      </div>
       
       <Handle
         type="source"
