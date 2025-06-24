@@ -31,9 +31,14 @@ const nodeTypes = {
 interface WorkflowCanvasProps {
   onNodeUpdate?: (nodeId: string, config: any) => void;
   onNodesChange?: (nodes: Node[]) => void;
+  defaultApiKey?: string;
 }
 
-export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeUpdate, onNodesChange }) => {
+export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ 
+  onNodeUpdate, 
+  onNodesChange,
+  defaultApiKey = ''
+}) => {
   const [nodes, setNodes, onNodesChangeInternal] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
@@ -116,13 +121,19 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeUpdate, on
 
       console.log('Dropping node:', { type, position });
 
+      // Set default config based on node type
+      let defaultConfig = {};
+      if (type === 'knowledgeBase' || type === 'llmEngine') {
+        defaultConfig = { apiKey: defaultApiKey };
+      }
+
       const newNode: Node = {
         id: `${type}-${Date.now()}`,
         type,
         position,
         data: { 
           label: `${type} node`,
-          config: {},
+          config: defaultConfig,
           onUpdate: handleNodeUpdate,
         },
       };
@@ -136,7 +147,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeUpdate, on
         return updatedNodes;
       });
     },
-    [setNodes, handleNodeUpdate, onNodesChange]
+    [setNodes, handleNodeUpdate, onNodesChange, defaultApiKey]
   );
 
   const onInit = useCallback((reactFlowInstance: any) => {

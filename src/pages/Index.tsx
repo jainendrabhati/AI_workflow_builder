@@ -9,11 +9,28 @@ import { Button } from '@/components/ui/button';
 import { Node } from '@xyflow/react';
 import { MessageSquare, Play } from 'lucide-react';
 import { toast } from 'sonner';
+import { saveWorkflow, buildStack } from '@/services/api';
+
+interface NodeConfig {
+  query?: string;
+  apiKey?: string;
+  fileName?: string;
+  file?: File;
+  prompt?: string;
+  [key: string]: any;
+}
+
+interface WorkflowNode extends Node {
+  data: {
+    config?: NodeConfig;
+    [key: string]: any;
+  };
+}
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<'dashboard' | 'editor'>('editor');
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [workflowNodes, setWorkflowNodes] = useState<Node[]>([]);
+  const [workflowNodes, setWorkflowNodes] = useState<WorkflowNode[]>([]);
 
   const handleDragStart = (event: React.DragEvent, nodeType: string) => {
     console.log('Drag started for:', nodeType);
@@ -21,7 +38,7 @@ const Index = () => {
     event.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleNodeUpdate = (nodeId: string, config: any) => {
+  const handleNodeUpdate = (nodeId: string, config: NodeConfig) => {
     console.log('Updating node config:', nodeId, config);
     
     setWorkflowNodes(prevNodes => 
@@ -32,7 +49,7 @@ const Index = () => {
               data: {
                 ...node.data,
                 config: {
-                  ...node.data.config,
+                  ...(node.data.config || {}),
                   ...config
                 }
               }
@@ -42,12 +59,17 @@ const Index = () => {
     );
   };
 
-  const handleNodesChange = (nodes: Node[]) => {
+  const handleNodesChange = (nodes: WorkflowNode[]) => {
     console.log('Nodes changed:', nodes);
     setWorkflowNodes(nodes);
   };
 
-  const handleSave = () => {
+  const getDefaultApiKey = () => {
+    // Return a default API key for prefilling (in real app, get from secure storage)
+    return 'sk-1234567890abcdef1234567890abcdef';
+  };
+
+  const handleSave = async () => {
     console.log('Saving workflow...');
     console.log('Current workflow nodes:', workflowNodes);
     
@@ -56,11 +78,22 @@ const Index = () => {
       return;
     }
 
-    // Here you would typically save to backend
-    toast.success('Workflow saved successfully!');
+    try {
+      const workflowData = {
+        nodes: workflowNodes,
+        name: `Workflow-${Date.now()}`,
+        description: 'Auto-generated workflow'
+      };
+
+      await saveWorkflow(workflowData);
+      toast.success('Workflow saved successfully!');
+    } catch (error) {
+      console.error('Save error:', error);
+      toast.error('Failed to save workflow. Please try again.');
+    }
   };
 
-  const handleBuildStack = () => {
+  const handleBuildStack = async () => {
     console.log('Building stack...');
     console.log('Workflow nodes for build:', workflowNodes);
     
@@ -85,18 +118,31 @@ const Index = () => {
     }
 
     // Check if user query has content
-    if (!userQueryNode.data.config?.query || userQueryNode.data.config.query.trim() === '') {
+    const userConfig = userQueryNode.data.config as NodeConfig;
+    if (!userConfig?.query || userConfig.query.trim() === '') {
       toast.error('Please enter a query in the User Query component');
       return;
     }
 
     // Check if LLM has API key
-    if (!llmNode.data.config?.apiKey || llmNode.data.config.apiKey.trim() === '') {
+    const llmConfig = llmNode.data.config as NodeConfig;
+    if (!llmConfig?.apiKey || llmConfig.apiKey.trim() === '') {
       toast.error('Please configure the API key for your LLM Engine');
       return;
     }
 
-    toast.success('Stack built successfully! 🚀');
+    try {
+      const buildData = {
+        nodes: workflowNodes,
+        timestamp: Date.now()
+      };
+
+      await buildStack(buildData);
+      toast.success('Stack built successfully! 🚀');
+    } catch (error) {
+      console.error('Build error:', error);
+      toast.error('Failed to build stack. Please try again.');
+    }
   };
 
   const handleNewStack = () => {
@@ -127,6 +173,7 @@ const Index = () => {
           <WorkflowCanvas 
             onNodeUpdate={handleNodeUpdate}
             onNodesChange={handleNodesChange}
+            defaultApiKey={getDefaultApiKey()}
           />
           
           {/* Floating Action Buttons */}
