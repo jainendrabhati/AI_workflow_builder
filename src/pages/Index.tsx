@@ -23,6 +23,7 @@ interface NodeConfig {
 interface WorkflowNode extends Node {
   data: {
     config?: NodeConfig;
+    onUpdate?: (nodeId: string, config: NodeConfig) => void;
     [key: string]: any;
   };
 }
@@ -39,10 +40,10 @@ const Index = () => {
   };
 
   const handleNodeUpdate = (nodeId: string, config: NodeConfig) => {
-    console.log('Updating node config:', nodeId, config);
+    console.log('Updating node config in Index:', nodeId, config);
     
-    setWorkflowNodes(prevNodes => 
-      prevNodes.map(node => 
+    setWorkflowNodes(prevNodes => {
+      const updatedNodes = prevNodes.map(node => 
         node.id === nodeId 
           ? {
               ...node,
@@ -55,12 +56,15 @@ const Index = () => {
               }
             }
           : node
-      )
-    );
+      );
+      
+      console.log('Updated workflow nodes:', updatedNodes);
+      return updatedNodes;
+    });
   };
 
   const handleNodesChange = (nodes: WorkflowNode[]) => {
-    console.log('Nodes changed:', nodes);
+    console.log('Nodes changed in Index:', nodes);
     setWorkflowNodes(nodes);
   };
 
@@ -79,12 +83,25 @@ const Index = () => {
     }
 
     try {
+      // Prepare nodes data with proper structure
+      const nodesForSave = workflowNodes.map(node => ({
+        id: node.id,
+        type: node.type,
+        position: node.position,
+        data: {
+          label: node.data.label,
+          config: node.data.config || {}
+        }
+      }));
+
       const workflowData = {
-        nodes: workflowNodes,
+        nodes: nodesForSave,
+        edges: [], // Add edges if you have them
         name: `Workflow-${Date.now()}`,
         description: 'Auto-generated workflow'
       };
 
+      console.log('Sending workflow data for save:', workflowData);
       await saveWorkflow(workflowData);
       toast.success('Workflow saved successfully!');
     } catch (error) {
@@ -118,25 +135,41 @@ const Index = () => {
     }
 
     // Check if user query has content
-    const userConfig = userQueryNode.data.config as NodeConfig;
+    const userConfig = userQueryNode.data.config;
+    console.log('User query config during build:', userConfig);
+    
     if (!userConfig?.query || userConfig.query.trim() === '') {
       toast.error('Please enter a query in the User Query component');
       return;
     }
 
     // Check if LLM has API key
-    const llmConfig = llmNode.data.config as NodeConfig;
+    const llmConfig = llmNode.data.config;
+    console.log('LLM config during build:', llmConfig);
+    
     if (!llmConfig?.apiKey || llmConfig.apiKey.trim() === '') {
       toast.error('Please configure the API key for your LLM Engine');
       return;
     }
 
     try {
+      // Prepare nodes data for build
+      const nodesForBuild = workflowNodes.map(node => ({
+        id: node.id,
+        type: node.type,
+        position: node.position,
+        data: {
+          label: node.data.label,
+          config: node.data.config || {}
+        }
+      }));
+
       const buildData = {
-        nodes: workflowNodes,
+        nodes: nodesForBuild,
         timestamp: Date.now()
       };
 
+      console.log('Sending build data:', buildData);
       await buildStack(buildData);
       toast.success('Stack built successfully! 🚀');
     } catch (error) {

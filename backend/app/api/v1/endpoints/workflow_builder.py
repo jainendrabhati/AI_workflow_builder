@@ -18,6 +18,8 @@ def save_workflow(
 ):
     """Save workflow with nodes and configurations"""
     try:
+        logger.info(f"Received workflow data: {workflow_data}")
+        
         # Extract workflow info
         name = workflow_data.get('name', 'Untitled Workflow')
         description = workflow_data.get('description', '')
@@ -26,6 +28,10 @@ def save_workflow(
         # Validate nodes
         if not nodes:
             raise HTTPException(status_code=400, detail="Workflow must contain at least one node")
+        
+        logger.info(f"Processing {len(nodes)} nodes")
+        for i, node in enumerate(nodes):
+            logger.info(f"Node {i}: type={node.get('type')}, data={node.get('data', {})}")
         
         # Create workflow
         workflow_create = WorkflowCreate(
@@ -49,53 +55,70 @@ def save_workflow(
         logger.error(f"Error saving workflow: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to save workflow: {str(e)}")
 
-@router.post("/build/{workflow_id}")
+@router.post("/build")
 def build_workflow(
-    workflow_id: int,
+    build_data: Dict[str, Any],
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
-    """Build and deploy a workflow"""
+    """Build workflow from provided data"""
     try:
-        # Get workflow
-        workflow = db.query(Workflow).filter(Workflow.id == workflow_id).first()
-        if not workflow:
-            raise HTTPException(status_code=404, detail="Workflow not found")
+        logger.info(f"Building workflow with data: {build_data}")
         
-        # Validate workflow definition
-        definition = workflow.definition
-        if not definition or not definition.get('nodes'):
-            raise HTTPException(status_code=400, detail="Workflow has no nodes to build")
+        nodes = build_data.get('nodes', [])
         
-        nodes = definition['nodes']
+        # Validate that we have nodes
+        if not nodes:
+            raise HTTPException(status_code=400, detail="No components to build. Please add some components to your workflow.")
         
-        # Validate required components
-        user_query_node = next((node for node in nodes if node.get('type') == 'userQuery'), None)
-        llm_node = next((node for node in nodes if node.get('type') == 'llmEngine'), None)
+        logger.info(f"Processing {len(nodes)} nodes for build")
+        
+        # Find required components
+        user_query_node = None
+        llm_node = None
+        
+        for node in nodes:
+            node_type = node.get('type')
+            logger.info(f"Checking node: type={node_type}, data={node.get('data', {})}")
+            
+            if node_type == 'userQuery':
+                user_query_node = node
+            elif node_type == 'llmEngine':
+                llm_node = node
         
         if not user_query_node:
-            raise HTTPException(status_code=400, detail="Workflow must contain a User Query component")
+            raise HTTPException(status_code=400, detail="Please add a User Query component to your workflow")
             
         if not llm_node:
-            raise HTTPException(status_code=400, detail="Workflow must contain an LLM Engine component")
+            raise HTTPException(status_code=400, detail="Please add an LLM Engine component to your workflow")
         
         # Validate configurations
-        user_config = user_query_node.get('data', {}).get('config', {})
-        llm_config = llm_node.get('data', {}).get('config', {})
+        user_data = user_query_node.get('data', {})
+        user_config = user_data.get('config', {})
+        user_query = user_config.get('query', '').strip()
         
-        if not user_config.get('query', '').strip():
-            raise HTTPException(status_code=400, detail="User Query component must have a query")
+        logger.info(f"User query config: {user_config}")
+        logger.info(f"User query value: '{user_query}'")
+        
+        if not user_query:
+            raise HTTPException(status_code=400, detail="Please enter a query in the User Query component")
             
-        if not llm_config.get('apiKey', '').strip():
-            raise HTTPException(status_code=400, detail="LLM Engine must have an API key configured")
+        llm_data = llm_node.get('data', {})
+        llm_config = llm_data.get('config', {})
+        llm_api_key = llm_config.get('apiKey', '').strip()
+        
+        logger.info(f"LLM config: {llm_config}")
+        
+        if not llm_api_key:
+            raise HTTPException(status_code=400, detail="Please configure the API key for your LLM Engine")
         
         # Add background task to build the workflow
-        background_tasks.add_task(build_workflow_task, workflow.id, definition)
+        background_tasks.add_task(build_workflow_task, nodes)
         
         return {
             "message": "Workflow build started successfully",
-            "workflow_id": workflow_id,
-            "status": "building"
+            "status": "building",
+            "nodes_processed": len(nodes)
         }
         
     except HTTPException:
@@ -104,16 +127,10 @@ def build_workflow(
         logger.error(f"Error building workflow: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to build workflow: {str(e)}")
 
-def build_workflow_task(workflow_id: int, definition: Dict[str, Any]):
+def build_workflow_task(nodes: List[Dict[str, Any]]):
     """Background task to build the workflow"""
     try:
-        logger.info(f"Building workflow {workflow_id}")
-        
-        # Here you would implement the actual workflow building logic
-        # For now, we'll just simulate the build process
-        
-        nodes = definition.get('nodes', [])
-        logger.info(f"Processing {len(nodes)} nodes")
+        logger.info(f"Building workflow with {len(nodes)} nodes")
         
         # Process each node type
         for node in nodes:
@@ -121,61 +138,21 @@ def build_workflow_task(workflow_id: int, definition: Dict[str, Any]):
             node_config = node.get('data', {}).get('config', {})
             
             if node_type == 'userQuery':
-                logger.info(f"Processing user query: {node_config.get('query', '')}")
+                query = node_config.get('query', '')
+                logger.info(f"Processing user query: {query}")
                 
             elif node_type == 'knowledgeBase':
-                logger.info(f"Processing knowledge base with file: {node_config.get('fileName', 'No file')}")
+                file_name = node_config.get('fileName', 'No file')
+                logger.info(f"Processing knowledge base with file: {file_name}")
                 
             elif node_type == 'llmEngine':
-                logger.info(f"Processing LLM with model: GPT-4o-mini")
+                prompt = node_config.get('prompt', 'Default prompt')
+                logger.info(f"Processing LLM with prompt: {prompt[:50]}...")
                 
             elif node_type == 'output':
                 logger.info("Processing output node")
         
-        logger.info(f"Workflow {workflow_id} built successfully")
+        logger.info("Workflow built successfully")
         
     except Exception as e:
-        logger.error(f"Error in build task for workflow {workflow_id}: {str(e)}")
-
-@router.get("/validate/{workflow_id}")
-def validate_workflow(workflow_id: int, db: Session = Depends(get_db)):
-    """Validate a workflow before building"""
-    try:
-        workflow = db.query(Workflow).filter(Workflow.id == workflow_id).first()
-        if not workflow:
-            raise HTTPException(status_code=404, detail="Workflow not found")
-        
-        definition = workflow.definition
-        if not definition or not definition.get('nodes'):
-            return {"valid": False, "errors": ["Workflow has no components"]}
-        
-        nodes = definition['nodes']
-        errors = []
-        
-        # Check for required components
-        user_query_node = next((node for node in nodes if node.get('type') == 'userQuery'), None)
-        llm_node = next((node for node in nodes if node.get('type') == 'llmEngine'), None)
-        
-        if not user_query_node:
-            errors.append("Missing User Query component")
-        else:
-            user_config = user_query_node.get('data', {}).get('config', {})
-            if not user_config.get('query', '').strip():
-                errors.append("User Query component is empty")
-        
-        if not llm_node:
-            errors.append("Missing LLM Engine component")
-        else:
-            llm_config = llm_node.get('data', {}).get('config', {})
-            if not llm_config.get('apiKey', '').strip():
-                errors.append("LLM Engine missing API key")
-        
-        return {
-            "valid": len(errors) == 0,
-            "errors": errors,
-            "node_count": len(nodes)
-        }
-        
-    except Exception as e:
-        logger.error(f"Error validating workflow: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to validate workflow: {str(e)}")
+        logger.error(f"Error in build task: {str(e)}")

@@ -58,7 +58,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
               }
             }
           };
-          console.log('Updated node:', updatedNode);
+          console.log('Updated node in canvas:', updatedNode);
           return updatedNode;
         }
         return node;
@@ -138,7 +138,7 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({
         },
       };
 
-      console.log('Creating new node:', newNode);
+      console.log('Creating new node with config:', newNode);
       setNodes((nds) => {
         const updatedNodes = nds.concat(newNode);
         if (onNodesChange) {
