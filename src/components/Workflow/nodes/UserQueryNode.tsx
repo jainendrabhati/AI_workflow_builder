@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { MessageSquare } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+
 
 interface UserQueryNodeProps {
   id: string;
@@ -38,6 +40,7 @@ export const UserQueryNode = ({ id, data, selected }: UserQueryNodeProps) => {
         selected ? 'border-blue-500' : 'border-gray-200'
       }`}
     >
+
       <div className="flex items-center gap-2 mb-3">
         <MessageSquare className="w-5 h-5 text-blue-600" />
         <span className="font-medium">User Query</span>

@@ -126,23 +126,16 @@ const Index = () => {
     try {
       const nodesForBuild = await Promise.all(
         workflowNodes.map(async node => {
-          const config = { ...(node.data.config || {}) };
+          const config = { ...node.data.config };
           let fileBase64 = null;
 
-          if (config.file instanceof File) {
-            const file = config.file;
+          if (config?.file instanceof File) {
+            const reader = new FileReader();
             fileBase64 = await new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => {
-                const result = reader.result as string;
-                resolve(result.split(',')[1]); // base64 part
-              };
+              reader.onload = () => resolve((reader.result as string).split(',')[1]);
               reader.onerror = reject;
-              reader.readAsDataURL(file);
+              reader.readAsDataURL(config.file as Blob);
             });
-
-            config.fileBase64 = fileBase64;
-            config.fileName = config.fileName || file.name;
             delete config.file;
           }
 
@@ -152,7 +145,10 @@ const Index = () => {
             position: node.position,
             data: {
               label: node.data.label,
-              config
+              config: {
+                ...config,
+                fileBase64: fileBase64 || undefined
+              }
             }
           };
         })

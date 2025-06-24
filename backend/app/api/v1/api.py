@@ -7,4 +7,8 @@ api_router = APIRouter()
 api_router.include_router(workflows.router, prefix="/workflows", tags=["workflows"])
 api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
+<<<<<<< HEAD
 api_router.include_router(workflow_builder.router, prefix="/workflow-builder", tags=["workflow-builder"])
+=======
+api_router.include_router(workflow_builder.router, prefix="/workflow-builder", tags=["workflow-builder"])
+>>>>>>> 8fb376b954702227b29d1b2fefe754a128ac0376
