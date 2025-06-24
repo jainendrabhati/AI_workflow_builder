@@ -1,5 +1,15 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
 
+export interface Workflow {
+  id: number;
+  name: string;
+  description: string;
+  nodes: any[];
+  edges: any[];
+  created_at?: string;
+  updated_at?: string;
+}
+
 export const documentApi = {
   async getAll(): Promise<any[]> {
     const response = await fetch(`${API_BASE_URL}/documents`);
@@ -128,6 +138,14 @@ export const workflowApi = {
     const result = await response.json();
     console.log('Workflow saved successfully:', result);
     return result;
+  },
+
+  async getWorkflows(): Promise<Workflow[]> {
+    return this.getAll();
+  },
+
+  async createWorkflow(name: string, description: string): Promise<Workflow> {
+    return this.create({ name, description, nodes: [], edges: [] });
   },
 };
 
