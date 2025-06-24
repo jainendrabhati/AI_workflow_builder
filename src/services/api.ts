@@ -125,3 +125,15 @@ export const chatApi = {
     return response.json();
   },
 };
+
+// Export individual functions that are used in Index.tsx
+export const saveWorkflow = workflowApi.saveWorkflow;
+export const buildStack = async (buildData: any): Promise<any> => {
+  const response = await fetch(`${API_BASE_URL}/workflow-builder/build`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(buildData),
+  });
+  if (!response.ok) throw new Error('Failed to build stack');
+  return response.json();
+};
