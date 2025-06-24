@@ -25,7 +25,7 @@ async def upload_document(
             file_content=file_content,
             workflow_id=workflow_id
         )
-        
+        print(f"Processed document: {result}")
         # Save to database
         db_document = Document(
             filename=file.filename,

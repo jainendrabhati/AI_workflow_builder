@@ -1,56 +1,52 @@
-
 import React, { useState } from 'react';
 import { Header } from '@/components/Layout/Header';
 import { ComponentLibrary } from '@/components/Sidebar/ComponentLibrary';
 import { WorkflowCanvas } from '@/components/Workflow/WorkflowCanvas';
-import { ConfigPanel } from '@/components/ConfigPanel/ConfigPanel';
 import { ChatModal } from '@/components/Chat/ChatModal';
 import { StackDashboard } from '@/components/StackDashboard/StackDashboard';
 import { Button } from '@/components/ui/button';
 import { Node } from '@xyflow/react';
 import { MessageSquare, Play } from 'lucide-react';
 import { toast } from 'sonner';
+import { saveWorkflow, buildStack } from '@/services/api';
+
+interface NodeConfig {
+  query?: string;
+  apiKey?: string;
+  fileName?: string;
+  file?: File | null;
+  prompt?: string;
+  [key: string]: any;
+}
+
+interface WorkflowNode extends Node {
+  data: {
+    config?: NodeConfig;
+    onUpdate?: (nodeId: string, config: NodeConfig) => void;
+    [key: string]: any;
+  };
+}
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<'dashboard' | 'editor'>('editor');
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [workflowNodes, setWorkflowNodes] = useState<Node[]>([]);
+  const [workflowNodes, setWorkflowNodes] = useState<WorkflowNode[]>([]);
 
   const handleDragStart = (event: React.DragEvent, nodeType: string) => {
-    console.log('Drag started for:', nodeType);
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleNodeUpdate = (nodeId: string, config: any) => {
-    console.log('Updating node config:', nodeId, config);
-    
-    // Update the selected node's config if it matches
-    if (selectedNode && selectedNode.id === nodeId) {
-      const updatedSelectedNode = {
-        ...selectedNode,
-        data: {
-          ...selectedNode.data,
-          config: {
-            ...selectedNode.data.config,
-            ...config
-          }
-        }
-      };
-      setSelectedNode(updatedSelectedNode);
-    }
-
-    // Update the workflow nodes state
-    setWorkflowNodes(prevNodes => 
-      prevNodes.map(node => 
-        node.id === nodeId 
+  const handleNodeUpdate = (nodeId: string, config: NodeConfig) => {
+    setWorkflowNodes(prevNodes =>
+      prevNodes.map(node =>
+        node.id === nodeId
           ? {
               ...node,
               data: {
                 ...node.data,
                 config: {
-                  ...node.data.config,
+                  ...(node.data.config || {}),
                   ...config
                 }
               }
@@ -60,56 +56,123 @@ const Index = () => {
     );
   };
 
-  const handleNodeSelect = (node: Node | null) => {
-    console.log('Node selected:', node);
-    setSelectedNode(node);
+  const handleNodesChange = (nodes: WorkflowNode[]) => {
+    setWorkflowNodes(nodes);
   };
 
-  const handleSave = () => {
-    console.log('Saving workflow...');
-    console.log('Current workflow nodes:', workflowNodes);
-    toast.success('Workflow saved successfully!');
+  const getDefaultApiKey = () => {
+    return 'sk-1234567890abcdef1234567890abcdef';
   };
 
-  const handleBuildStack = () => {
-    console.log('Building stack...');
-    console.log('Workflow nodes for build:', workflowNodes);
-    
-    // Validate that we have nodes
+  const handleSave = async () => {
+    if (workflowNodes.length === 0) {
+      toast.error('No components to save. Please add some components to your workflow.');
+      return;
+    }
+
+    try {
+      const nodesForSave = workflowNodes.map(node => ({
+        id: node.id,
+        type: node.type,
+        position: node.position,
+        data: {
+          label: node.data.label,
+          config: node.data.config || {}
+        }
+      }));
+
+      const workflowData = {
+        nodes: nodesForSave,
+        edges: [],
+        name: `Workflow-${Date.now()}`,
+        description: 'Auto-generated workflow'
+      };
+
+      await saveWorkflow(workflowData);
+      toast.success('Workflow saved successfully!');
+    } catch (error) {
+      console.error('Save error:', error);
+      toast.error('Failed to save workflow. Please try again.');
+    }
+  };
+
+  const handleBuildStack = async () => {
     if (workflowNodes.length === 0) {
       toast.error('Please add some components to your workflow before building');
       return;
     }
 
-    // Basic validation for required configurations
     const userQueryNode = workflowNodes.find(node => node.type === 'userQuery');
     const llmNode = workflowNodes.find(node => node.type === 'llmEngine');
 
-    if (!userQueryNode) {
-      toast.error('Please add a User Query component to your workflow');
+    if (!userQueryNode || !llmNode) {
+      toast.error('Please add both User Query and LLM Engine components to your workflow');
       return;
     }
 
-    if (!llmNode) {
-      toast.error('Please add an LLM Engine component to your workflow');
+    const userConfig = userQueryNode.data.config || {};
+    const llmConfig = llmNode.data.config || {};
+
+    if (!userConfig.query?.trim()) {
+      toast.error('Please enter a query in the User Query component');
       return;
     }
 
-    if (!llmNode.data.config?.apiKey) {
+    if (!llmConfig.apiKey?.trim()) {
       toast.error('Please configure the API key for your LLM Engine');
       return;
     }
 
-    toast.success('Stack built successfully! 🚀');
+    try {
+      const nodesForBuild = await Promise.all(
+        workflowNodes.map(async node => {
+          const config = { ...(node.data.config || {}) };
+          let fileBase64 = null;
+
+          if (config.file instanceof File) {
+            const file = config.file;
+            fileBase64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const result = reader.result as string;
+                resolve(result.split(',')[1]); // base64 part
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+
+            config.fileBase64 = fileBase64;
+            config.fileName = config.fileName || file.name;
+            delete config.file;
+          }
+
+          return {
+            id: node.id,
+            type: node.type,
+            position: node.position,
+            data: {
+              label: node.data.label,
+              config
+            }
+          };
+        })
+      );
+
+      const buildData = {
+        nodes: nodesForBuild,
+        timestamp: Date.now()
+      };
+
+      await buildStack(buildData);
+      toast.success('Stack built successfully! 🚀');
+    } catch (error) {
+      console.error('Build error:', error);
+      toast.error('Failed to build stack. Please try again.');
+    }
   };
 
-  const handleNewStack = () => {
-    setCurrentView('dashboard');
-  };
-
-  const handleStackSelect = (stackId: string) => {
-    setCurrentView('editor');
-  };
+  const handleNewStack = () => setCurrentView('dashboard');
+  const handleStackSelect = (_stackId: string) => setCurrentView('editor');
 
   if (currentView === 'dashboard') {
     return (
@@ -123,17 +186,17 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header onNewStack={handleNewStack} onSave={handleSave} />
-      
+
       <div className="flex h-[calc(100vh-64px)]">
         <ComponentLibrary onDragStart={handleDragStart} />
-        
+
         <div className="flex-1 relative">
-          <WorkflowCanvas 
-            onNodeSelect={handleNodeSelect}
+          <WorkflowCanvas
             onNodeUpdate={handleNodeUpdate}
+            onNodesChange={handleNodesChange}
+            defaultApiKey={getDefaultApiKey()}
           />
-          
-          {/* Floating Action Buttons */}
+
           <div className="absolute bottom-6 right-6 flex flex-col gap-3">
             <Button
               onClick={() => setIsChatOpen(true)}
@@ -150,8 +213,6 @@ const Index = () => {
             </Button>
           </div>
         </div>
-        
-        <ConfigPanel selectedNode={selectedNode} onNodeUpdate={handleNodeUpdate} />
       </div>
 
       <ChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />

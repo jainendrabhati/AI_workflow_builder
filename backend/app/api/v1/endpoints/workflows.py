@@ -15,11 +15,21 @@ def get_workflows(db: Session = Depends(get_db)):
 
 @router.post("/", response_model=WorkflowResponse)
 def create_workflow(workflow: WorkflowCreate, db: Session = Depends(get_db)):
+    # Check if a workflow with the same name already exists
+    existing_workflow = db.query(Workflow).filter(Workflow.name == workflow.name).first()
+    if existing_workflow:
+        raise HTTPException(
+            status_code=400,
+            detail=f"A workflow with the name '{workflow.name}' already exists."
+        )
+    
+    # Create new workflow
     db_workflow = Workflow(**workflow.dict())
     db.add(db_workflow)
     db.commit()
     db.refresh(db_workflow)
     return db_workflow
+
 
 @router.get("/{workflow_id}", response_model=WorkflowResponse)
 def get_workflow(workflow_id: int, db: Session = Depends(get_db)):

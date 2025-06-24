@@ -1,5 +1,4 @@
-
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import {
   ReactFlow,
   Background,
@@ -29,19 +28,24 @@ const nodeTypes = {
 };
 
 interface WorkflowCanvasProps {
-  onNodeSelect: (node: Node | null) => void;
   onNodeUpdate?: (nodeId: string, config: any) => void;
+  onNodesChange?: (nodes: Node[]) => void;
+  defaultApiKey?: string;
 }
 
-export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeSelect, onNodeUpdate }) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ 
+  onNodeUpdate, 
+  onNodesChange,
+  defaultApiKey = ''
+}) => {
+  const [nodes, setNodes, onNodesChangeInternal] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   const handleNodeUpdate = useCallback((nodeId: string, newConfig: any) => {
     console.log('Updating node in canvas:', nodeId, newConfig);
     
-    setNodes((nds) =>
-      nds.map((node) => {
+    setNodes((nds) => {
+      const updatedNodes = nds.map((node) => {
         if (node.id === nodeId) {
           const updatedNode = {
             ...node,
@@ -53,18 +57,37 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeSelect, on
               }
             }
           };
-          console.log('Updated node:', updatedNode);
+          console.log('Updated node in canvas:', updatedNode);
           return updatedNode;
         }
         return node;
-      })
-    );
+      });
+      
+      // Notify parent component about the updated nodes
+      if (onNodesChange) {
+        onNodesChange(updatedNodes);
+      }
+      
+      return updatedNodes;
+    });
     
     // Also call the parent handler if provided
     if (onNodeUpdate) {
       onNodeUpdate(nodeId, newConfig);
     }
-  }, [setNodes, onNodeUpdate]);
+  }, [setNodes, onNodeUpdate, onNodesChange]);
+
+  const handleNodesChange = useCallback((changes: any) => {
+    onNodesChangeInternal(changes);
+    
+    // Get updated nodes after changes and notify parent
+    setNodes((currentNodes) => {
+      if (onNodesChange) {
+        onNodesChange(currentNodes);
+      }
+      return currentNodes;
+    });
+  }, [onNodesChangeInternal, onNodesChange, setNodes]);
 
   const onConnect = useCallback(
     (params: Connection | Edge) => {
@@ -97,37 +120,33 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeSelect, on
 
       console.log('Dropping node:', { type, position });
 
+      // Set default config based on node type
+      let defaultConfig = {};
+      if (type === 'knowledgeBase' || type === 'llmEngine') {
+        defaultConfig = { apiKey: defaultApiKey };
+      }
+
       const newNode: Node = {
         id: `${type}-${Date.now()}`,
         type,
         position,
         data: { 
           label: `${type} node`,
-          config: {},
+          config: defaultConfig,
           onUpdate: handleNodeUpdate,
         },
       };
 
-      console.log('Creating new node:', newNode);
-      setNodes((nds) => nds.concat(newNode));
-    },
-    [setNodes, handleNodeUpdate]
-  );
-
-  const onNodeClick = useCallback(
-    (event: React.MouseEvent, node: Node) => {
-      console.log('Node clicked:', node);
-      // Add the update handler to the node data before selecting it
-      const nodeWithHandler = {
-        ...node,
-        data: {
-          ...node.data,
-          onUpdate: handleNodeUpdate,
+      console.log('Creating new node with config:', newNode);
+      setNodes((nds) => {
+        const updatedNodes = nds.concat(newNode);
+        if (onNodesChange) {
+          onNodesChange(updatedNodes);
         }
-      };
-      onNodeSelect(nodeWithHandler);
+        return updatedNodes;
+      });
     },
-    [onNodeSelect, handleNodeUpdate]
+    [setNodes, handleNodeUpdate, onNodesChange, defaultApiKey]
   );
 
   const onInit = useCallback((reactFlowInstance: any) => {
@@ -139,13 +158,12 @@ export const WorkflowCanvas: React.FC<WorkflowCanvasProps> = ({ onNodeSelect, on
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
+        onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onInit={onInit}
         onDrop={onDrop}
         onDragOver={onDragOver}
-        onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
         fitView
         className="bg-gray-50"

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, ExternalLink } from 'lucide-react';
@@ -20,7 +19,7 @@ export const StackDashboard: React.FC<StackDashboardProps> = ({ onStackSelect })
 
   const loadStacks = async () => {
     try {
-      const workflows = await workflowApi.getWorkflows();
+      const workflows = await workflowApi.getAll();
       setStacks(workflows);
     } catch (error) {
       console.error('Failed to load workflows:', error);
@@ -31,7 +30,7 @@ export const StackDashboard: React.FC<StackDashboardProps> = ({ onStackSelect })
 
   const handleCreateStack = async (name: string, description: string) => {
     try {
-      const newStack = await workflowApi.createWorkflow(name, description);
+      const newStack = await workflowApi.create({ name, description, nodes: [], edges: [] });
       setStacks(prev => [...prev, newStack]);
       setIsCreateModalOpen(false);
       onStackSelect(newStack.id.toString());
