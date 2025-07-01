@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Database, Upload } from 'lucide-react';
@@ -19,17 +20,20 @@ export const KnowledgeBaseNode = ({ data, selected }: any) => {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = e.target.files?.[0];
-    console.log('Uploaded file:', uploadedFile);
+    console.log('📄 File uploaded:', uploadedFile);
     if (uploadedFile) {
       setFile(uploadedFile);
       setFileName(uploadedFile.name);
       
-
       const nodeId = data?.id || data?.nodeId;
-      data.onUpdate?.(nodeId, {
+      const updatedConfig = {
+        ...data.config,
         file: uploadedFile,
         fileName: uploadedFile.name
-      });
+      };
+      
+      console.log('📝 Updating knowledge base config:', updatedConfig);
+      data.onUpdate?.(nodeId, updatedConfig);
     }
   };
 
@@ -38,9 +42,13 @@ export const KnowledgeBaseNode = ({ data, selected }: any) => {
     setApiKey(newApiKey);
 
     const nodeId = data?.id || data?.nodeId;
-    data.onUpdate?.(nodeId, {
+    const updatedConfig = {
+      ...data.config,
       apiKey: newApiKey
-    });
+    };
+    
+    console.log('🔑 Updating knowledge base API key:', updatedConfig);
+    data.onUpdate?.(nodeId, updatedConfig);
   };
 
   return (

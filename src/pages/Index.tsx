@@ -17,6 +17,7 @@ interface NodeConfig {
   fileName?: string;
   file?: File | null;
   prompt?: string;
+  fileContent?: string;
   [key: string]: any;
 }
 
@@ -39,25 +40,32 @@ const Index = () => {
   };
 
   const handleNodeUpdate = (nodeId: string, config: NodeConfig) => {
-    setWorkflowNodes(prevNodes =>
-      prevNodes.map(node =>
-        node.id === nodeId
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                config: {
-                  ...(node.data.config || {}),
-                  ...config
-                }
+    console.log('📝 Node update received:', nodeId, config);
+    setWorkflowNodes(prevNodes => {
+      const updatedNodes = prevNodes.map(node => {
+        if (node.id === nodeId) {
+          const updatedNode = {
+            ...node,
+            data: {
+              ...node.data,
+              config: {
+                ...(node.data.config || {}),
+                ...config
               }
             }
-          : node
-      )
-    );
+          };
+          console.log('✅ Updated node:', updatedNode);
+          return updatedNode;
+        }
+        return node;
+      });
+      console.log('📊 All nodes after update:', updatedNodes);
+      return updatedNodes;
+    });
   };
 
   const handleNodesChange = (nodes: WorkflowNode[]) => {
+    console.log('🔄 Nodes changed:', nodes);
     setWorkflowNodes(nodes);
   };
 
@@ -72,15 +80,41 @@ const Index = () => {
     }
 
     try {
-      const nodesForSave = workflowNodes.map(node => ({
-        id: node.id,
-        type: node.type,
-        position: node.position,
-        data: {
-          label: node.data.label,
-          config: node.data.config || {}
-        }
-      }));
+      console.log('💾 Saving workflow with nodes:', workflowNodes);
+      
+      const nodesForSave = await Promise.all(
+        workflowNodes.map(async node => {
+          const config = { ...node.data.config };
+          
+          // Handle file conversion to base64 for knowledge base nodes
+          if (node.type === 'knowledgeBase' && config?.file instanceof File) {
+            const reader = new FileReader();
+            const fileContent = await new Promise<string>((resolve, reject) => {
+              reader.onload = () => {
+                const result = reader.result as string;
+                const base64Content = result.split(',')[1];
+                resolve(base64Content);
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(config.file as File);
+            });
+            
+            config.fileContent = fileContent;
+            config.fileName = config.file.name;
+            delete config.file;
+          }
+
+          return {
+            id: node.id,
+            type: node.type,
+            position: node.position,
+            data: {
+              label: node.data.label,
+              config: config
+            }
+          };
+        })
+      );
 
       const workflowData = {
         nodes: nodesForSave,
@@ -89,10 +123,11 @@ const Index = () => {
         description: 'Auto-generated workflow'
       };
 
+      console.log('📤 Sending workflow data:', workflowData);
       await saveWorkflow(workflowData);
       toast.success('Workflow saved successfully!');
     } catch (error) {
-      console.error('Save error:', error);
+      console.error('❌ Save error:', error);
       toast.error('Failed to save workflow. Please try again.');
     }
   };
@@ -102,6 +137,8 @@ const Index = () => {
       toast.error('Please add some components to your workflow before building');
       return;
     }
+
+    console.log('🚀 Building stack with nodes:', workflowNodes);
 
     const userQueryNode = workflowNodes.find(node => node.type === 'userQuery');
     const llmNode = workflowNodes.find(node => node.type === 'llmEngine');
@@ -113,6 +150,9 @@ const Index = () => {
 
     const userConfig = userQueryNode.data.config || {};
     const llmConfig = llmNode.data.config || {};
+
+    console.log('👤 User Query Config:', userConfig);
+    console.log('🤖 LLM Config:', llmConfig);
 
     if (!userConfig.query?.trim()) {
       toast.error('Please enter a query in the User Query component');
@@ -128,26 +168,27 @@ const Index = () => {
       const nodesForBuild = await Promise.all(
         workflowNodes.map(async node => {
           const config = { ...node.data.config };
-          let fileContent = null;
-          let fileName = null;
+          
+          console.log(`📋 Processing ${node.type} node:`, config);
 
           // Handle file conversion to base64 for knowledge base nodes
           if (node.type === 'knowledgeBase' && config?.file instanceof File) {
+            console.log('📄 Converting file to base64:', config.file.name);
             const reader = new FileReader();
-            fileContent = await new Promise<string>((resolve, reject) => {
+            const fileContent = await new Promise<string>((resolve, reject) => {
               reader.onload = () => {
                 const result = reader.result as string;
-                // Remove data URL prefix to get just the base64 content
                 const base64Content = result.split(',')[1];
                 resolve(base64Content);
               };
               reader.onerror = reject;
               reader.readAsDataURL(config.file as File);
             });
-            fileName = config.file.name;
             
-            // Remove the File object from config since it can't be serialized
+            config.fileContent = fileContent;
+            config.fileName = config.file.name;
             delete config.file;
+            console.log('✅ File converted to base64');
           }
 
           return {
@@ -156,16 +197,13 @@ const Index = () => {
             position: node.position,
             data: {
               label: node.data.label,
-              config: {
-                ...config,
-                ...(fileContent && { fileContent, fileName })
-              }
+              config: config
             }
           };
         })
       );
 
-      console.log('🚀 Sending build data:', nodesForBuild);
+      console.log('📦 Final build data:', nodesForBuild);
 
       const buildData = {
         nodes: nodesForBuild,
@@ -175,7 +213,7 @@ const Index = () => {
       await buildStack(buildData);
       toast.success('Stack built successfully! 🚀');
     } catch (error) {
-      console.error('Build error:', error);
+      console.error('❌ Build error:', error);
       toast.error('Failed to build stack. Please try again.');
     }
   };

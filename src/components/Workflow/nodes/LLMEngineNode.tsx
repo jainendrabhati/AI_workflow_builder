@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Settings } from 'lucide-react';
@@ -7,31 +8,40 @@ import { Textarea } from '@/components/ui/textarea';
 export const LLMEngineNode = ({ data, selected }: any) => {
   const [apiKey, setApiKey] = useState(data.config?.apiKey || '');
   const [prompt, setPrompt] = useState(
-    data.config?.prompt || 'You are a helpful PDF assistant...'
+    data.config?.prompt || 'You are a helpful PDF assistant. Use the provided context to answer questions accurately.'
   );
 
   useEffect(() => {
     setApiKey(data.config?.apiKey || '');
-    setPrompt(data.config?.prompt || 'You are a helpful PDF assistant...');
+    setPrompt(data.config?.prompt || 'You are a helpful PDF assistant. Use the provided context to answer questions accurately.');
   }, [data.config]);
-
-  useEffect(() => {
-    const nodeId = data?.id || data?.nodeId;
-    data.onUpdate?.(nodeId, {
-      apiKey,
-      prompt
-    });
-  }, [apiKey, prompt]);
 
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newApiKey = e.target.value;
     setApiKey(newApiKey);
+    
+    const nodeId = data?.id || data?.nodeId;
+    const updatedConfig = {
+      ...data.config,
+      apiKey: newApiKey
+    };
+    
+    console.log('🔑 Updating LLM API key:', updatedConfig);
+    data.onUpdate?.(nodeId, updatedConfig);
   };
 
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newPrompt = e.target.value;
-    console.log('New prompt:', newPrompt);
     setPrompt(newPrompt);
+    
+    const nodeId = data?.id || data?.nodeId;
+    const updatedConfig = {
+      ...data.config,
+      prompt: newPrompt
+    };
+    
+    console.log('📝 Updating LLM prompt:', updatedConfig);
+    data.onUpdate?.(nodeId, updatedConfig);
   };
 
   return (
