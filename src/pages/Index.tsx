@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Header } from '@/components/Layout/Header';
 import { ComponentLibrary } from '@/components/Sidebar/ComponentLibrary';
@@ -127,15 +128,25 @@ const Index = () => {
       const nodesForBuild = await Promise.all(
         workflowNodes.map(async node => {
           const config = { ...node.data.config };
-          let fileBase64 = null;
+          let fileContent = null;
+          let fileName = null;
 
-          if (config?.file instanceof File) {
+          // Handle file conversion to base64 for knowledge base nodes
+          if (node.type === 'knowledgeBase' && config?.file instanceof File) {
             const reader = new FileReader();
-            fileBase64 = await new Promise<string>((resolve, reject) => {
-              reader.onload = () => resolve((reader.result as string).split(',')[1]);
+            fileContent = await new Promise<string>((resolve, reject) => {
+              reader.onload = () => {
+                const result = reader.result as string;
+                // Remove data URL prefix to get just the base64 content
+                const base64Content = result.split(',')[1];
+                resolve(base64Content);
+              };
               reader.onerror = reject;
-              reader.readAsDataURL(config.file as Blob);
+              reader.readAsDataURL(config.file as File);
             });
+            fileName = config.file.name;
+            
+            // Remove the File object from config since it can't be serialized
             delete config.file;
           }
 
@@ -147,12 +158,14 @@ const Index = () => {
               label: node.data.label,
               config: {
                 ...config,
-                fileBase64: fileBase64 || undefined
+                ...(fileContent && { fileContent, fileName })
               }
             }
           };
         })
       );
+
+      console.log('🚀 Sending build data:', nodesForBuild);
 
       const buildData = {
         nodes: nodesForBuild,

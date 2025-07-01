@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
@@ -6,6 +7,7 @@ from app.models.workflow import Workflow
 from app.schemas.workflow import WorkflowCreate, WorkflowResponse
 import json
 import logging
+import base64
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -24,7 +26,6 @@ def save_or_update_workflow(
         description = workflow_data.get('description', '')
         nodes = workflow_data.get('nodes', [])
         edges = workflow_data.get('edges', [])
-        print(workflow_data)
 
         # Validate nodes
         if not nodes:
@@ -71,11 +72,9 @@ def build_workflow(
 ):
     """Build workflow from provided data"""
     try:
-        logger.info(f"Building workflow with data: {build_data}")
+        logger.info(f"Building workflow with data keys: {list(build_data.keys())}")
         
         nodes = build_data.get('nodes', [])
-        print(f"Nodes: {build_data}")
-        
         
         # Validate that we have nodes
         if not nodes:
@@ -86,6 +85,7 @@ def build_workflow(
         # Find required components
         user_query_node = None
         llm_node = None
+        knowledge_base_node = None
         
         for node in nodes:
             node_type = node.get('type')
@@ -95,6 +95,8 @@ def build_workflow(
                 user_query_node = node
             elif node_type == 'llmEngine':
                 llm_node = node
+            elif node_type == 'knowledgeBase':
+                knowledge_base_node = node
         
         if not user_query_node:
             raise HTTPException(status_code=400, detail="Please add a User Query component to your workflow")
@@ -116,8 +118,11 @@ def build_workflow(
         llm_data = llm_node.get('data', {})
         llm_config = llm_data.get('config', {})
         llm_api_key = llm_config.get('apiKey', '').strip()
+        llm_prompt = llm_config.get('prompt', '').strip()
         
-       
+        logger.info(f"LLM config: {llm_config}")
+        logger.info(f"LLM API key present: {'Yes' if llm_api_key else 'No'}")
+        logger.info(f"LLM prompt: '{llm_prompt[:100]}...' (first 100 chars)")
 
         if not llm_api_key:
             raise HTTPException(status_code=400, detail="Please configure the API key for your LLM Engine")
@@ -128,7 +133,12 @@ def build_workflow(
         return {
             "message": "Workflow build started successfully",
             "status": "building",
-            "nodes_processed": len(nodes)
+            "nodes_processed": len(nodes),
+            "components_found": {
+                "user_query": bool(user_query_node),
+                "llm_engine": bool(llm_node),
+                "knowledge_base": bool(knowledge_base_node)
+            }
         }
         
     except HTTPException:
@@ -140,33 +150,67 @@ def build_workflow(
 def build_workflow_task(nodes: List[Dict[str, Any]]):
     """Background task to build the workflow"""
     try:
-        logger.info(f"Building workflow with {len(nodes)} nodes")
+        logger.info(f"🚀 Building workflow with {len(nodes)} nodes")
         
         # Process each node type
         for node in nodes:
             node_type = node.get('type')
             node_config = node.get('data', {}).get('config', {})
-            print(node_config)
+            
+            logger.info(f"📝 Processing {node_type} node with config keys: {list(node_config.keys())}")
+            
             if node_type == 'userQuery':
                 query = node_config.get('query', '')
-                logger.info(f"Processing user query: {query}")
-                print(f"User Query: {query}")
+                logger.info(f"👤 User Query: {query}")
+                print(f"👤 User Query: {query}")
                 
             elif node_type == 'knowledgeBase':
                 file_name = node_config.get('fileName', 'No file')
-                logger.info(f"Processing knowledge base with file: {file_name}")
-                print(f"Knowledge Base File: {file_name}")
+                file_content = node_config.get('fileContent')
+                api_key = node_config.get('apiKey', 'Not provided')
+                
+                logger.info(f"📚 Knowledge Base:")
+                logger.info(f"  - File: {file_name}")
+                logger.info(f"  - API Key: {'Present' if api_key != 'Not provided' else 'Missing'}")
+                logger.info(f"  - File Content: {'Present' if file_content else 'Missing'}")
+                
+                print(f"📚 Knowledge Base File: {file_name}")
+                print(f"📚 Knowledge Base API Key: {'Present' if api_key != 'Not provided' else 'Missing'}")
+                
+                if file_content:
+                    # Process the base64 file content
+                    try:
+                        # Decode base64 to get file bytes
+                        file_bytes = base64.b64decode(file_content)
+                        logger.info(f"📄 File size: {len(file_bytes)} bytes")
+                        print(f"📄 Processed file size: {len(file_bytes)} bytes")
+                    except Exception as e:
+                        logger.error(f"❌ Error processing file: {str(e)}")
+                        print(f"❌ Error processing file: {str(e)}")
                 
             elif node_type == 'llmEngine':
                 prompt = node_config.get('prompt', 'Default prompt')
-                logger.info(f"Processing LLM with prompt: {prompt[:50]}...")
-                print(f"LLM Prompt: {prompt}")  
+                api_key = node_config.get('apiKey', 'Not provided')
+                
+                logger.info(f"🤖 LLM Engine:")
+                logger.info(f"  - Prompt: {prompt[:100]}{'...' if len(prompt) > 100 else ''}")
+                logger.info(f"  - API Key: {'Present' if api_key != 'Not provided' else 'Missing'}")
+                
+                print(f"🤖 LLM Prompt: {prompt[:100]}{'...' if len(prompt) > 100 else ''}")
+                print(f"🤖 LLM API Key: {'Present' if api_key != 'Not provided' else 'Missing'}")
                 
             elif node_type == 'output':
-                logger.info("Processing output node")
-                print("Output Node: Ready to display results")
+                logger.info("📤 Processing output node")
+                print("📤 Output Node: Ready to display results")
+                
+            elif node_type == 'webSearch':
+                api_key = node_config.get('apiKey', 'Not provided')
+                logger.info(f"🔍 Web Search API Key: {'Present' if api_key != 'Not provided' else 'Missing'}")
+                print(f"🔍 Web Search API Key: {'Present' if api_key != 'Not provided' else 'Missing'}")
         
-        logger.info("Workflow built successfully")
+        logger.info("✅ Workflow built successfully")
+        print("✅ Workflow processing completed!")
         
     except Exception as e:
-        logger.error(f"Error in build task: {str(e)}")
+        logger.error(f"❌ Error in build task: {str(e)}")
+        print(f"❌ Error in build task: {str(e)}")
